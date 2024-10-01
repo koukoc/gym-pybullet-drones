@@ -17,7 +17,6 @@ reinforcement learning library `stable-baselines3`.
 """
 import os
 os.environ['KMP_DUPLICATE_LIB_OK']='TRUE'
-from typing import Callable
 import time
 from datetime import datetime
 import argparse
@@ -35,7 +34,7 @@ from gym_pybullet_drones.envs.MultiHoverAviary import MultiHoverAviary
 from gym_pybullet_drones.utils.utils import sync, str2bool
 from gym_pybullet_drones.utils.enums import ObservationType, ActionType
 
-DEFAULT_GUI = False
+DEFAULT_GUI = True
 DEFAULT_RECORD_VIDEO = False
 DEFAULT_OUTPUT_FOLDER = 'results'
 DEFAULT_COLAB = False
@@ -45,101 +44,82 @@ DEFAULT_ACT = ActionType('vel') # 'rpm' or 'pid' or 'vel' or 'one_d_rpm' or 'one
 DEFAULT_AGENTS = 2
 DEFAULT_MA = True
 
-def sinusoidal_schedule(initial_value: float,final_value: float) -> Callable[[float], float]:
-    """
-    sinusoidal learning rate schedule.
-
-    :param initial_value: Initial learning rate.
-    :param final_value: Initial learning rate.
-    :return: schedule that computes
-      current learning rate depending on remaining progress
-    """
-    def func(progress_remaining: float) -> float:
-        """
-        Progress will decrease from 1 (beginning) to 0.
-
-        :param progress_remaining:
-        :return: current learning rate
-        """
-        return 1e-6*np.sin(2*np.pi*50000*(1-progress_remaining))+((np.exp(progress_remaining)-1)/np.exp(1)*(initial_value-final_value))+final_value
-
-    return func
-
 def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_GUI, plot=True, colab=DEFAULT_COLAB, record_video=DEFAULT_RECORD_VIDEO, local=True):
 
-    filename = os.path.join(output_folder, 'save-'+datetime.now().strftime("%m.%d.%Y_%H.%M.%S"))
-    if not os.path.exists(filename):
-        os.makedirs(filename+'/')
+    # filename = os.path.join(output_folder, 'save-'+datetime.now().strftime("%m.%d.%Y_%H.%M.%S"))
+    # if not os.path.exists(filename):
+    #     os.makedirs(filename+'/')
 
-    if not multiagent:
-        train_env = make_vec_env(HoverAviary,
-                                 env_kwargs=dict(obs=DEFAULT_OBS, act=DEFAULT_ACT),
-                                 n_envs=10,
-                                 seed=0
-                                 )
-        eval_env = HoverAviary(obs=DEFAULT_OBS, act=DEFAULT_ACT)
-    else:
-        train_env = make_vec_env(MultiHoverAviary,
-                                 env_kwargs=dict(num_drones=DEFAULT_AGENTS, obs=DEFAULT_OBS, act=DEFAULT_ACT),
-                                 n_envs=5,
-                                 seed=0
-                                 )
-        eval_env = MultiHoverAviary(num_drones=DEFAULT_AGENTS, obs=DEFAULT_OBS, act=DEFAULT_ACT)
+    # if not multiagent:
+    #     train_env = make_vec_env(HoverAviary,
+    #                              env_kwargs=dict(obs=DEFAULT_OBS, act=DEFAULT_ACT),
+    #                              n_envs=1,
+    #                              seed=0
+    #                              )
+    #     eval_env = HoverAviary(obs=DEFAULT_OBS, act=DEFAULT_ACT)
+    # else:
+    #     train_env = make_vec_env(MultiHoverAviary,
+    #                              env_kwargs=dict(num_drones=DEFAULT_AGENTS, obs=DEFAULT_OBS, act=DEFAULT_ACT),
+    #                              n_envs=1,
+    #                              seed=0
+    #                              )
+    #     eval_env = MultiHoverAviary(num_drones=DEFAULT_AGENTS, obs=DEFAULT_OBS, act=DEFAULT_ACT)
 
-    #### Check the environment's spaces ########################
-    print('[INFO] Action space:', train_env.action_space)
-    print('[INFO] Observation space:', train_env.observation_space)
+    # #### Check the environment's spaces ########################
+    # print('[INFO] Action space:', train_env.action_space)
+    # print('[INFO] Observation space:', train_env.observation_space)
 
-    #### Train the model ####################################### vf fro value function
-    policy_kwargs = dict(net_arch=dict(pi=[128, 128], vf=[128, 128]))
-    model = PPO('MlpPolicy',
-                train_env,
-                learning_rate=3e-4,
-                batch_size=1024,
-                # tensorboard_log=filename+'/tb/',
-                device="auto",
-                verbose=1,
-                policy_kwargs=policy_kwargs)
-    model.set_random_seed()
-    #### Target cumulative rewards (problem-dependent) ##########
-    if DEFAULT_ACT == ActionType.ONE_D_RPM:
-        target_reward = 474.15 if not multiagent else 949.5
-    else:
-        target_reward = 2567. if not multiagent else 7000.
-    callback_on_best = StopTrainingOnRewardThreshold(reward_threshold=target_reward,
-                                                     verbose=1)
-    eval_callback = EvalCallback(eval_env,
-                                 callback_on_new_best=callback_on_best,
-                                 verbose=1,
-                                 best_model_save_path=filename+'/',
-                                 log_path=filename+'/',
-                                 eval_freq=int(1000),
-                                 deterministic=True,
-                                 render=False)
-    model.learn(total_timesteps=int(10343000) if local else int(1e2), # shorter training in GitHub Actions pytest
-                callback=eval_callback,
-                log_interval=100)
+    # #### Train the model #######################################
+    # model = PPO('MlpPolicy',
+    #             train_env,
+    #             learning_rate=1e-3,
+    #             batch_size=64,
+    #             # tensorboard_log=filename+'/tb/',
+    #             device="cuda",
+    #             verbose=1)
 
-    #### Save the model ########################################
-    model.save(filename+'/final_model.zip')
-    print(filename)
+    # #### Target cumulative rewards (problem-dependent) ##########
+    # if DEFAULT_ACT == ActionType.ONE_D_RPM:
+    #     target_reward = 474.15 if not multiagent else 949.5
+    # else:
+    #     target_reward = 467. if not multiagent else 850.
+    # callback_on_best = StopTrainingOnRewardThreshold(reward_threshold=target_reward,
+    #                                                  verbose=1)
+    # eval_callback = EvalCallback(eval_env,
+    #                              callback_on_new_best=callback_on_best,
+    #                              verbose=1,
+    #                              best_model_save_path=filename+'/',
+    #                              log_path=filename+'/',
+    #                              eval_freq=int(1000),
+    #                              deterministic=True,
+    #                              render=False)
+    # model.learn(total_timesteps=int(1e7) if local else int(1e2), # shorter training in GitHub Actions pytest
+    #             callback=eval_callback,
+    #             log_interval=100)
 
-    #### Print training progression ############################
-    with np.load(filename+'/evaluations.npz') as data:
-        for j in range(data['timesteps'].shape[0]):
-            print(str(data['timesteps'][j])+","+str(data['results'][j][0]))
+    # #### Save the model ########################################
+    # model.save(filename+'/final_model.zip')
+    # print(filename)
+
+    # #### Print training progression ############################
+    # with np.load(filename+'/evaluations.npz') as data:
+    #     for j in range(data['timesteps'].shape[0]):
+    #         print(str(data['timesteps'][j])+","+str(data['results'][j][0]))
 
     ############################################################
     ############################################################
     ############################################################
     ############################################################
     ############################################################
-
+    filename = DEFAULT_OUTPUT_FOLDER+'/save-10.01.2024_17.10.19'
+    # filename = DEFAULT_OUTPUT_FOLDER+'/retrain/retrainsave-10.01.2024_13.37.23'
+    path = filename+'/best_model.zip'
+    print(path)
     if local:
         input("Press Enter to continue...")
 
-    # if os.path.isfile(filename+'/final_model.zip'):
-    #     path = filename+'/final_model.zip'
+    if os.path.isfile(filename+'/final_model.zip'):
+        path = filename+'/final_model.zip'
     if os.path.isfile(filename+'/best_model.zip'):
         path = filename+'/best_model.zip'
     else:
@@ -181,14 +161,14 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
         obs, reward, terminated, truncated, info = test_env.step(action)
         obs2 = obs.squeeze()
         act2 = action.squeeze()
-        print("Obs:", obs, "\tAction", action, "\tReward:", reward, "\tTerminated:", terminated, "\tTruncated:", truncated)
+        # print("Obs:", obs, "\tAction", action, "\tReward:", reward, "\tTerminated:", terminated, "\tTruncated:", truncated)
         if DEFAULT_OBS == ObservationType.KIN:
             if not multiagent:
                 logger.log(drone=0,
                     timestamp=i/test_env.CTRL_FREQ,
                     state=np.hstack([obs2[0:3],
                                         np.zeros(4),
-                                        obs2[3:15],
+                                        obs2[6:18],
                                         act2
                                         ]),
                     control=np.zeros(12)
@@ -199,11 +179,12 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
                         timestamp=i/test_env.CTRL_FREQ,
                         state=np.hstack([obs2[d][0:3],
                                             np.zeros(4),
-                                            obs2[d][3:15],
+                                            obs2[d][6:18],
                                             act2[d]
                                             ]),
                         control=np.zeros(12)
                         )
+                    print('==')
         test_env.render()
         print(terminated)
         sync(i, start, test_env.CTRL_TIMESTEP)
@@ -213,6 +194,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
 
     if plot and DEFAULT_OBS == ObservationType.KIN:
         logger.plot()
+    # logger.save_as_csv()
 
 if __name__ == '__main__':
     #### Define and parse (optional) arguments for the script ##

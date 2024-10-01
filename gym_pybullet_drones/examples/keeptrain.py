@@ -17,7 +17,6 @@ reinforcement learning library `stable-baselines3`.
 """
 import os
 os.environ['KMP_DUPLICATE_LIB_OK']='TRUE'
-from typing import Callable
 import time
 from datetime import datetime
 import argparse
@@ -37,7 +36,7 @@ from gym_pybullet_drones.utils.enums import ObservationType, ActionType
 
 DEFAULT_GUI = False
 DEFAULT_RECORD_VIDEO = False
-DEFAULT_OUTPUT_FOLDER = 'results'
+DEFAULT_OUTPUT_FOLDER = 'results/retrain'
 DEFAULT_COLAB = False
 
 DEFAULT_OBS = ObservationType('kin') # 'kin' or 'rgb'
@@ -45,29 +44,9 @@ DEFAULT_ACT = ActionType('vel') # 'rpm' or 'pid' or 'vel' or 'one_d_rpm' or 'one
 DEFAULT_AGENTS = 2
 DEFAULT_MA = True
 
-def sinusoidal_schedule(initial_value: float,final_value: float) -> Callable[[float], float]:
-    """
-    sinusoidal learning rate schedule.
-
-    :param initial_value: Initial learning rate.
-    :param final_value: Initial learning rate.
-    :return: schedule that computes
-      current learning rate depending on remaining progress
-    """
-    def func(progress_remaining: float) -> float:
-        """
-        Progress will decrease from 1 (beginning) to 0.
-
-        :param progress_remaining:
-        :return: current learning rate
-        """
-        return 1e-6*np.sin(2*np.pi*50000*(1-progress_remaining))+((np.exp(progress_remaining)-1)/np.exp(1)*(initial_value-final_value))+final_value
-
-    return func
-
 def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_GUI, plot=True, colab=DEFAULT_COLAB, record_video=DEFAULT_RECORD_VIDEO, local=True):
 
-    filename = os.path.join(output_folder, 'save-'+datetime.now().strftime("%m.%d.%Y_%H.%M.%S"))
+    filename = os.path.join(output_folder, 'retrainsave-'+datetime.now().strftime("%m.%d.%Y_%H.%M.%S"))
     if not os.path.exists(filename):
         os.makedirs(filename+'/')
 
@@ -90,22 +69,25 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
     print('[INFO] Action space:', train_env.action_space)
     print('[INFO] Observation space:', train_env.observation_space)
 
-    #### Train the model ####################################### vf fro value function
+    #### Train the model #######################################
     policy_kwargs = dict(net_arch=dict(pi=[128, 128], vf=[128, 128]))
     model = PPO('MlpPolicy',
                 train_env,
-                learning_rate=3e-4,
+                learning_rate=5e-5,
                 batch_size=1024,
                 # tensorboard_log=filename+'/tb/',
                 device="auto",
                 verbose=1,
                 policy_kwargs=policy_kwargs)
     model.set_random_seed()
+    model.set_parameters('results/modelforRetrain/save-10.01.2024_17.10.19/best_model',exact_match=True)
+    print(model.ent_coef)
+
     #### Target cumulative rewards (problem-dependent) ##########
     if DEFAULT_ACT == ActionType.ONE_D_RPM:
         target_reward = 474.15 if not multiagent else 949.5
     else:
-        target_reward = 2567. if not multiagent else 7000.
+        target_reward = 1067. if not multiagent else 6000.
     callback_on_best = StopTrainingOnRewardThreshold(reward_threshold=target_reward,
                                                      verbose=1)
     eval_callback = EvalCallback(eval_env,
@@ -116,12 +98,13 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
                                  eval_freq=int(1000),
                                  deterministic=True,
                                  render=False)
-    model.learn(total_timesteps=int(10343000) if local else int(1e2), # shorter training in GitHub Actions pytest
+    model.learn(total_timesteps=int(1e7) if local else int(1e2), # shorter training in GitHub Actions pytest
                 callback=eval_callback,
-                log_interval=100)
+                log_interval=100,
+                reset_num_timesteps=False)
 
     #### Save the model ########################################
-    model.save(filename+'/final_model.zip')
+    model.save(filename+'/final_model_retrain.zip')
     print(filename)
 
     #### Print training progression ############################

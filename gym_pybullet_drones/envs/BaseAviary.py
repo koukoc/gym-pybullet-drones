@@ -539,7 +539,8 @@ class BaseAviary(gym.Env):
     ################################################################################
 
     def _getDroneStateVector(self,
-                             nth_drone
+                             nth_drone,
+                             target=None
                              ):
         """Returns the state vector of the n-th drone.
 
@@ -556,9 +557,16 @@ class BaseAviary(gym.Env):
             to understand its format.
 
         """
-        state = np.hstack([self.pos[nth_drone, :], self.quat[nth_drone, :], self.rpy[nth_drone, :],
-                           self.vel[nth_drone, :], self.ang_v[nth_drone, :], self.last_clipped_action[nth_drone, :]])
-        return state.reshape(20,)
+        if type(target) is not np.ndarray:
+            state = np.hstack([self.pos[nth_drone, :], self.quat[nth_drone, :], self.rpy[nth_drone, :],
+                            self.vel[nth_drone, :], self.ang_v[nth_drone, :], self.last_clipped_action[nth_drone, :]])
+            return state.reshape(20,)
+        else:
+            state = np.hstack([target[:]-self.pos[nth_drone, :],
+                            self.pos[nth_drone, :], self.quat[nth_drone, :], self.rpy[nth_drone, :],
+                            self.vel[nth_drone, :], self.ang_v[nth_drone, :], self.last_clipped_action[nth_drone, :]])
+            return state.reshape(23,)
+           
 
     ################################################################################
 

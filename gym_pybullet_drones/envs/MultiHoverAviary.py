@@ -54,7 +54,17 @@ class MultiHoverAviary(BaseRLAviary):
             The type of action space (1 or 3D; RPMS, thurst and torques, or waypoint with PID control)
 
         """
-        self.EPISODE_LEN_SEC = 8
+        self.EPISODE_LEN_SEC = 18
+
+        targetPos1 = 2*np.random.rand(3,1).transpose()[0]-1
+        targetPos1[2]=np.random.rand(1,1)[0][0]+0.3
+        targetPos2 = 2*np.random.rand(3,1).transpose()[0]-1
+        targetPos2[2]=np.random.rand(1,1)[0][0]+0.3
+        # targetPos1= np.array([-1,-1,0.8])
+        # targetPos2= np.array([0,0,0.3])
+        initial_xyzs = np.array([targetPos1,targetPos2])
+        self.TARGET_POS = np.array([targetPos2,targetPos1])
+
         super().__init__(drone_model=drone_model,
                          num_drones=num_drones,
                          neighbourhood_radius=neighbourhood_radius,
@@ -66,9 +76,11 @@ class MultiHoverAviary(BaseRLAviary):
                          gui=gui,
                          record=record, 
                          obs=obs,
-                         act=act
+                         act=act,
+                         targetPos=self.TARGET_POS
                          )
-        self.TARGET_POS = self.INIT_XYZS + np.array([[0,0,1/(i+1)] for i in range(num_drones)])
+        
+       
 
     ################################################################################
     
@@ -83,8 +95,12 @@ class MultiHoverAviary(BaseRLAviary):
         """
         states = np.array([self._getDroneStateVector(i) for i in range(self.NUM_DRONES)])
         ret = 0
+        total_error = 0
         for i in range(self.NUM_DRONES):
-            ret += max(0, 2 - np.linalg.norm(self.TARGET_POS[i,:]-states[i][0:3])**4)
+            ret += max(0, 5 - np.linalg.norm(self.TARGET_POS[i]-states[i][0:3])**4)
+            total_error += np.linalg.norm(self.TARGET_POS[i,:]-states[i][0:3])
+        if total_error < 0.01:
+            ret+=4
         return ret
 
     ################################################################################
@@ -100,12 +116,13 @@ class MultiHoverAviary(BaseRLAviary):
         """
         states = np.array([self._getDroneStateVector(i) for i in range(self.NUM_DRONES)])
         dist = 0
-        for i in range(self.NUM_DRONES):
-            dist += np.linalg.norm(self.TARGET_POS[i,:]-states[i][0:3])
-        if dist < .0001:
-            return True
-        else:
-            return False
+        # for i in range(self.NUM_DRONES):
+        #     dist += np.linalg.norm(self.TARGET_POS[i,:]-states[i][0:3])
+        # if dist < .0001:
+        #     return True
+        # else:
+        #     return False
+        return False
 
     ################################################################################
     
@@ -122,6 +139,7 @@ class MultiHoverAviary(BaseRLAviary):
         for i in range(self.NUM_DRONES):
             if (abs(states[i][0]) > 2.0 or abs(states[i][1]) > 2.0 or states[i][2] > 2.0 # Truncate when a drones is too far away
              or abs(states[i][7]) > .4 or abs(states[i][8]) > .4 # Truncate when a drone is too tilted
+             or np.linalg.norm(states[0][0:3]-states[1][0:3]) < 0.05
             ):
                 return True
         if self.step_counter/self.PYB_FREQ > self.EPISODE_LEN_SEC:

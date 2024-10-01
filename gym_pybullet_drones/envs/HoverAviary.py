@@ -48,8 +48,11 @@ class HoverAviary(BaseRLAviary):
             The type of action space (1 or 3D; RPMS, thurst and torques, or waypoint with PID control)
 
         """
-        self.TARGET_POS = np.array([0,0,1])
-        self.EPISODE_LEN_SEC = 8
+        # self.TARGET_POS = np.array([1,1,1])
+        self.TARGET_POS = 2*np.random.rand(3,1).transpose()[0]-1
+        self.TARGET_POS[2]=np.random.rand(1,1)[0][0]
+        # print('target is',self.TARGET_POS) 
+        self.EPISODE_LEN_SEC = 18
         super().__init__(drone_model=drone_model,
                          num_drones=1,
                          initial_xyzs=initial_xyzs,
@@ -60,7 +63,8 @@ class HoverAviary(BaseRLAviary):
                          gui=gui,
                          record=record,
                          obs=obs,
-                         act=act
+                         act=act,
+                         targetPos=self.TARGET_POS
                          )
 
     ################################################################################
@@ -75,7 +79,10 @@ class HoverAviary(BaseRLAviary):
 
         """
         state = self._getDroneStateVector(0)
-        ret = max(0, 2 - np.linalg.norm(self.TARGET_POS-state[0:3])**4)
+        # print('target is',self.TARGET_POS,'now is',state[3:6],'error is ',np.linalg.norm(self.TARGET_POS-state[3:6]))
+
+        ret = max(0, 3 - np.linalg.norm(self.TARGET_POS-state[0:3])**2)
+
         return ret
 
     ################################################################################
@@ -89,12 +96,13 @@ class HoverAviary(BaseRLAviary):
             Whether the current episode is done.
 
         """
-        state = self._getDroneStateVector(0)
-        if np.linalg.norm(self.TARGET_POS-state[0:3]) < .0001:
-            return True
-        else:
-            return False
-        
+        state = self._getDroneStateVector(0,target=self.TARGET_POS)
+        # if np.linalg.norm(self.TARGET_POS-state[3:6]) < .0001:
+        #     return True
+        # else:
+        #     return False
+        return False
+
     ################################################################################
     
     def _computeTruncated(self):
