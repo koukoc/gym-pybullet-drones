@@ -45,12 +45,11 @@ DEFAULT_ACT = ActionType('vel') # 'rpm' or 'pid' or 'vel' or 'one_d_rpm' or 'one
 DEFAULT_AGENTS = 2
 DEFAULT_MA = True
 
-def sinusoidal_schedule(initial_value: float,final_value: float) -> Callable[[float], float]:
+def linear_schedule(initial_value: float,final_value: float) -> Callable[[float], float]:
     """
-    sinusoidal learning rate schedule.
+    Linear learning rate schedule.
 
     :param initial_value: Initial learning rate.
-    :param final_value: Initial learning rate.
     :return: schedule that computes
       current learning rate depending on remaining progress
     """
@@ -61,7 +60,7 @@ def sinusoidal_schedule(initial_value: float,final_value: float) -> Callable[[fl
         :param progress_remaining:
         :return: current learning rate
         """
-        return 1e-6*np.sin(2*np.pi*50000*(1-progress_remaining))+((np.exp(progress_remaining)-1)/np.exp(1)*(initial_value-final_value))+final_value
+        return initial_value-((1-progress_remaining) * (initial_value-final_value))
 
     return func
 
@@ -81,7 +80,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
     else:
         train_env = make_vec_env(MultiHoverAviary,
                                  env_kwargs=dict(num_drones=DEFAULT_AGENTS, obs=DEFAULT_OBS, act=DEFAULT_ACT),
-                                 n_envs=5,
+                                 n_envs=8,
                                  seed=0
                                  )
         eval_env = MultiHoverAviary(num_drones=DEFAULT_AGENTS, obs=DEFAULT_OBS, act=DEFAULT_ACT)
@@ -91,11 +90,11 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
     print('[INFO] Observation space:', train_env.observation_space)
 
     #### Train the model ####################################### vf fro value function
-    policy_kwargs = dict(net_arch=dict(pi=[128, 128], vf=[128, 128]))
+    policy_kwargs = dict(net_arch=dict(pi=[1024, 1024, 1024, 1024, 1024, 1024], vf=[1024, 1024, 1024, 1024, 1024, 1024]),activation_fn=torch.nn.modules.activation.Tanh)
     model = PPO('MlpPolicy',
                 train_env,
-                learning_rate=3e-4,
-                batch_size=1024,
+                learning_rate=linear_schedule(1e-6,1e-8),
+                batch_size=64,
                 # tensorboard_log=filename+'/tb/',
                 device="auto",
                 verbose=1,
@@ -105,7 +104,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
     if DEFAULT_ACT == ActionType.ONE_D_RPM:
         target_reward = 474.15 if not multiagent else 949.5
     else:
-        target_reward = 2567. if not multiagent else 7000.
+        target_reward = 2567. if not multiagent else 15000.
     callback_on_best = StopTrainingOnRewardThreshold(reward_threshold=target_reward,
                                                      verbose=1)
     eval_callback = EvalCallback(eval_env,
@@ -116,7 +115,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
                                  eval_freq=int(1000),
                                  deterministic=True,
                                  render=False)
-    model.learn(total_timesteps=int(10343000) if local else int(1e2), # shorter training in GitHub Actions pytest
+    model.learn(total_timesteps=int(20340000) if local else int(1e2), # shorter training in GitHub Actions pytest
                 callback=eval_callback,
                 log_interval=100)
 

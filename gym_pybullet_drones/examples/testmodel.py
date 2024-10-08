@@ -111,8 +111,8 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
     ############################################################
     ############################################################
     ############################################################
-    filename = DEFAULT_OUTPUT_FOLDER+'/save-10.01.2024_17.10.19'
-    # filename = DEFAULT_OUTPUT_FOLDER+'/retrain/retrainsave-10.01.2024_13.37.23'
+    filename = DEFAULT_OUTPUT_FOLDER+'/save-10.08.2024_01.08.17'
+    # filename = DEFAULT_OUTPUT_FOLDER+'/retrain/retrainsave-10.01.2024_23.24.39'
     path = filename+'/best_model.zip'
     print(path)
     if local:
