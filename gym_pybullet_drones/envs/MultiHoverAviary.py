@@ -62,8 +62,8 @@ class MultiHoverAviary(BaseRLAviary):
             targetPos1[2]=np.random.rand(1,1)[0][0]+0.3
             targetPos2 = 2*np.random.rand(3,1).transpose()[0]-1
             targetPos2[2]=np.random.rand(1,1)[0][0]+0.3
-        targetPos1= np.array([-1,-1,0.8])
-        targetPos2= np.array([-0.8,0.5,0.3])
+        # targetPos1= np.array([-1,-1,0.8])
+        # targetPos2= np.array([-0.8,0.5,0.3])
         initial_xyzs = np.array([targetPos1,targetPos2])
         self.TARGET_POS = np.array([targetPos2,targetPos1])
         
