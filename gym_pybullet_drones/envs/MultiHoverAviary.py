@@ -20,7 +20,8 @@ class MultiHoverAviary(BaseRLAviary):
                  gui=False,
                  record=False,
                  obs: ObservationType=ObservationType.KIN,
-                 act: ActionType=ActionType.RPM
+                 act: ActionType=ActionType.RPM,
+                 dummyDroneModel= None
                  ):
         """Initialization of a multi-agent RL environment.
 
@@ -57,15 +58,18 @@ class MultiHoverAviary(BaseRLAviary):
         self.EPISODE_LEN_SEC = 18
         targetPos1 = np.array([0.,0.,0.])
         targetPos2 = np.array([0.,0.,0.])
-        while (np.linalg.norm(targetPos1-targetPos2) < 0.2):
+        targetPos3 = np.array([0.,0.,0.])
+        while (np.linalg.norm(targetPos1-targetPos2) < 0.2 and np.linalg.norm(targetPos2-targetPos3) < 0.2 and np.linalg.norm(targetPos1-targetPos3) < 0.2):
             targetPos1 = 2*np.random.rand(3,1).transpose()[0]-1
             targetPos1[2]=np.random.rand(1,1)[0][0]+0.3
             targetPos2 = 2*np.random.rand(3,1).transpose()[0]-1
             targetPos2[2]=np.random.rand(1,1)[0][0]+0.3
+            targetPos3 = 2*np.random.rand(3,1).transpose()[0]-1
+            targetPos3[2]=np.random.rand(1,1)[0][0]+0.3
         # targetPos1= np.array([-1,-1,0.8])
         # targetPos2= np.array([-0.8,0.5,0.3])
-        initial_xyzs = np.array([targetPos1,targetPos2])
-        self.TARGET_POS = np.array([targetPos2,targetPos1])
+        initial_xyzs = np.array([targetPos1,targetPos2,targetPos3])
+        self.TARGET_POS = np.array([targetPos3,targetPos2,targetPos1])
         
         super().__init__(drone_model=drone_model,
                          num_drones=num_drones,
@@ -142,6 +146,8 @@ class MultiHoverAviary(BaseRLAviary):
             if (abs(states[i][0]) > 5.0 or abs(states[i][1]) > 5.0 or states[i][2] > 5.0 # Truncate when a drones is too far away
             #  or abs(states[i][7]) > .4 or abs(states[i][8]) > .4 # Truncate when a drone is too tilted
              or np.linalg.norm(states[0][0:3]-states[1][0:3]) < 0.2
+             or np.linalg.norm(states[1][0:3]-states[2][0:3]) < 0.2
+             or np.linalg.norm(states[0][0:3]-states[2][0:3]) < 0.2
             ):
                 return True
         if self.step_counter/self.PYB_FREQ > self.EPISODE_LEN_SEC:

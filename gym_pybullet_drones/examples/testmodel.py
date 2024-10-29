@@ -41,7 +41,7 @@ DEFAULT_COLAB = False
 
 DEFAULT_OBS = ObservationType('kin') # 'kin' or 'rgb'
 DEFAULT_ACT = ActionType('vel') # 'rpm' or 'pid' or 'vel' or 'one_d_rpm' or 'one_d_pid'
-DEFAULT_AGENTS = 2
+DEFAULT_AGENTS = 3
 DEFAULT_MA = True
 
 def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_GUI, plot=True, colab=DEFAULT_COLAB, record_video=DEFAULT_RECORD_VIDEO, local=True):
@@ -111,7 +111,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
     ############################################################
     ############################################################
     ############################################################
-    filename = DEFAULT_OUTPUT_FOLDER+'/save-10.08.2024_01.08.17'
+    filename = DEFAULT_OUTPUT_FOLDER+'/save-10.17.2024_07.22.32'
     # filename = DEFAULT_OUTPUT_FOLDER+'/retrain/retrainsave-10.01.2024_23.24.39'
     path = filename+'/best_model.zip'
     print(path)
@@ -125,6 +125,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
     else:
         print("[ERROR]: no model under the specified path", filename)
     model = PPO.load(path)
+    model2 = PPO.load(path)
 
     #### Show (and record a video of) the model's performance ##
     if not multiagent:
@@ -155,9 +156,13 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
     obs, info = test_env.reset(seed=42, options={})
     start = time.time()
     for i in range((test_env.EPISODE_LEN_SEC+2)*test_env.CTRL_FREQ):
-        action, _states = model.predict(obs,
+        action1, _states = model.predict(obs,
                                         deterministic=True
                                         )
+        action2, _states = model2.predict(obs,
+                                        deterministic=True
+                                        )
+        action = np.array([action1[0],action2[1],action2[2]])
         obs, reward, terminated, truncated, info = test_env.step(action)
         obs2 = obs.squeeze()
         act2 = action.squeeze()
@@ -166,7 +171,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
             if not multiagent:
                 logger.log(drone=0,
                     timestamp=i/test_env.CTRL_FREQ,
-                    state=np.hstack([obs2[0:3],
+                    state=np.hstack([obs2[3:6],
                                         np.zeros(4),
                                         obs2[6:18],
                                         act2
@@ -194,7 +199,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
 
     if plot and DEFAULT_OBS == ObservationType.KIN:
         logger.plot()
-    # logger.save_as_csv()
+    logger.save_as_csv()
 
 if __name__ == '__main__':
     #### Define and parse (optional) arguments for the script ##

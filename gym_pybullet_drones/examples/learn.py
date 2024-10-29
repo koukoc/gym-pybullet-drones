@@ -42,7 +42,7 @@ DEFAULT_COLAB = False
 
 DEFAULT_OBS = ObservationType('kin') # 'kin' or 'rgb'
 DEFAULT_ACT = ActionType('vel') # 'rpm' or 'pid' or 'vel' or 'one_d_rpm' or 'one_d_pid'
-DEFAULT_AGENTS = 2
+DEFAULT_AGENTS = 3
 DEFAULT_MA = True
 
 def linear_schedule(initial_value: float,final_value: float) -> Callable[[float], float]:
@@ -79,7 +79,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
         eval_env = HoverAviary(obs=DEFAULT_OBS, act=DEFAULT_ACT)
     else:
         train_env = make_vec_env(MultiHoverAviary,
-                                 env_kwargs=dict(num_drones=DEFAULT_AGENTS, obs=DEFAULT_OBS, act=DEFAULT_ACT),
+                                 env_kwargs=dict(num_drones=DEFAULT_AGENTS, obs=DEFAULT_OBS, act=DEFAULT_ACT,dummyDroneModel=()),
                                  n_envs=8,
                                  seed=0
                                  )
@@ -93,7 +93,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
     policy_kwargs = dict(net_arch=dict(pi=[1024, 1024, 1024, 1024, 1024, 1024], vf=[1024, 1024, 1024, 1024, 1024, 1024]),activation_fn=torch.nn.modules.activation.Tanh)
     model = PPO('MlpPolicy',
                 train_env,
-                learning_rate=linear_schedule(1e-6,1e-8),
+                learning_rate=linear_schedule(1e-6,1e-7),
                 batch_size=64,
                 # tensorboard_log=filename+'/tb/',
                 device="auto",
@@ -115,7 +115,7 @@ def run(multiagent=DEFAULT_MA, output_folder=DEFAULT_OUTPUT_FOLDER, gui=DEFAULT_
                                  eval_freq=int(1000),
                                  deterministic=True,
                                  render=False)
-    model.learn(total_timesteps=int(20340000) if local else int(1e2), # shorter training in GitHub Actions pytest
+    model.learn(total_timesteps=int(30340000) if local else int(1e2), # shorter training in GitHub Actions pytest
                 callback=eval_callback,
                 log_interval=100)
 

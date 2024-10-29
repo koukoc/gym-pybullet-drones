@@ -26,7 +26,8 @@ class BaseRLAviary(BaseAviary):
                  record=False,
                  obs: ObservationType=ObservationType.KIN,
                  act: ActionType=ActionType.RPM,
-                 targetPos=None
+                 targetPos=None,
+                 dummyDroneModel=None
                  ):
         """Initialization of a generic single and multi-agent RL environment.
 
@@ -319,8 +320,8 @@ class BaseRLAviary(BaseAviary):
 
             ret = np.array([obs_15[i, :] for i in range(self.NUM_DRONES)]).astype('float32')
             #### Add action buffer to observation #######################
-            for i in range(self.ACTION_BUFFER_SIZE):
-                ret = np.hstack([ret, np.array([self.action_buffer[i][j, :] for j in range(self.NUM_DRONES)])])
+            # for i in range(self.ACTION_BUFFER_SIZE):
+            #     ret = np.hstack([ret, np.array([self.action_buffer[i][j, :] for j in range(self.NUM_DRONES)])])
             return ret
             ############################################################
         else:
